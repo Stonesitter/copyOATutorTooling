@@ -249,8 +249,8 @@ def process_sheet(spreadsheet_key, sheet_name, default_path, is_local, latex, ve
             df["Lesson ID"] = ""
         if "Image Checksum" not in df.columns:
             df["Image Checksum"] = ""
-            variabilization = 'Variabilization' in df.columns
-            meta = 'Meta' in df.columns
+        variabilization = 'Variabilization' in df.columns
+        meta = 'Meta' in df.columns
         try:
             keep = []
             if variabilization and meta:
@@ -424,7 +424,7 @@ def process_sheet(spreadsheet_key, sheet_name, default_path, is_local, latex, ve
                         hint_oer = row["OER src"]
                     if type(row["License"]) != float and row["License"] != "":
                         hint_license = row["License"]
-                        images, hint_dic, current_subhints, tutoring, previous_tutor, previous_images, figure_path, image_df_str = \
+                    images, hint_dic, current_subhints, tutoring, previous_tutor, previous_images, figure_path, image_df_str = \
                             write_hint_json(row, current_step_name, hint_oer, hint_license, tutoring, images, figure_path, path, hint_dic, 
                                             verbosity, variabilization, latex, old_path)
                         
@@ -433,7 +433,7 @@ def process_sheet(spreadsheet_key, sheet_name, default_path, is_local, latex, ve
                         hint_oer = row["OER src"]
                     if type(row["License"]) != float and row["License"] != "":
                         hint_license = row["License"]
-                        images, hint_dic, current_subhints, tutoring, previous_tutor, previous_images, figure_path, image_df_str = \
+                    images, hint_dic, current_subhints, tutoring, previous_tutor, previous_images, figure_path, image_df_str = \
                             write_scaffold_json(row, current_step_name, hint_oer, hint_license, tutoring, images, figure_path, path, hint_dic,
                                                 verbosity, variabilization, latex, old_path)
 
@@ -553,5 +553,5 @@ if __name__ == '__main__':
         latex = 'FALSE'
     else:
         latex = 'TRUE'
-        process_sheet(sheet_key, sheet_name, '../OpenStax1', is_local, latex, course_name="", mode="process_sheet")
+    process_sheet(sheet_key, sheet_name, '../OpenStax1', is_local, latex, course_name="", mode="process_sheet")
     
