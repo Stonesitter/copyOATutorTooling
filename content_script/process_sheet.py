@@ -479,6 +479,16 @@ def process_sheet(spreadsheet_key, sheet_name, default_path, is_local, latex, ve
 
     if is_local == "online":
         try:
+            # === PATCH START ===
+            # Preserve any existing Lesson IDs before writing back
+            if "Lesson ID" in df.columns and "Lesson ID" in error_debug_df.columns:
+                error_debug_df["Lesson ID"].fillna(df["Lesson ID"], inplace=True)
+    
+            # (Optional) also preserve existing Problem IDs if same issue happens
+            if "Problem ID" in df.columns and "Problem ID" in error_debug_df.columns:
+                error_debug_df["Problem ID"].fillna(df["Problem ID"], inplace=True)
+                # === PATCH END ===
+    
             set_with_dataframe(worksheet, error_debug_df, col=col)
         except Exception as e:
             print('Fail to write to google sheet. Waiting...')
