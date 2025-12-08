@@ -42,6 +42,11 @@ def preprocess_text_to_latex(text, tutoring=False, stepMC=False, render_latex="T
     else:
         render_latex = False
 
+        # --- BYPASS: If the user provides real LaTeX, leave text untouched ---
+    if any(tag in text for tag in ["\\(", "\\)", "\\[", "\\]", "\\begin", "\\end"]):
+        # Skip all token processing and return text as-is
+        return text, True
+
     if render_latex:
         text = str(text)
         text = regex.sub(lambda match: replace[match.group(0)], text)
