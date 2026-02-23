@@ -293,9 +293,9 @@ def process_sheet(spreadsheet_key, sheet_name, default_path, is_local, latex, ve
                         "openstax KC", "KC", "Taxonomy", "License", "Problem ID", "Lesson ID", "Image Checksum", "Meta"]
             else:
                 keep = ["Problem Name", "Row Type", "Title", "Body Text", "Answer", "answerType", "HintID", "Dependency",
-                        "mcChoices", "Images (space delimited)", "Parent", "OER src", "openstax KC", "KC", "Taxonomy", "License", 
+                        "mcChoices", "Images (space delimited)", "Parent", "OER src", "openstax KC", "KC", "Taxonomy", "License",
                         "Problem ID", "Lesson ID", "Image Checksum"]
-                df = df[keep]
+            df = df[keep]
 
             with pd.ExcelWriter(spreadsheet_key, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
                 df.to_excel(writer, sheet_name=sheet_name, index=False)  # Save changes
