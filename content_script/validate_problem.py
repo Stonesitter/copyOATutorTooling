@@ -1,5 +1,6 @@
 import requests
 import os
+import shutil
 from PIL import Image, UnidentifiedImageError
 
 from create_dir import *
@@ -24,17 +25,21 @@ def validate_image(image, checksum, old_path):
             if os.path.isdir(figures_dir):
                 if any([create_image_md5(figures_dir + "/" + figure_name) == stored_md5 for figure_name in os.listdir(figures_dir)]):
                     continue
+        i = re.sub(r"https://imgur\.com/([\d\w]+)", r"https://i.imgur.com/\g<1>.png", i)
+        if i.startswith("/"):
+            try:
+                Image.open(i)
+            except UnidentifiedImageError:
+                raise Exception("Local image cannot be opened")
+            continue
+
         try:
-            i = re.sub(r"https://imgur\.com/([\d\w]+)", r"https://i.imgur.com/\g<1>.png", i)
-            if i.startswith("/"):
-                name = old_path + "/" + name
-                shutil.copyfile(i, name)
-            else:
-                r = requests.get(i, headers={"user-agent": "OATutor/1.0"})
-                with open(name, 'wb') as outfile:
-                    outfile.write(r.content)
-        except:
-            raise Exception("Image retrieval error")
+            r = requests.get(i, headers={"user-agent": "OATutor/1.0"})
+        except Exception as e:
+            raise Exception(f"Image retrieval error: {e}")
+
+        with open(name, 'wb') as outfile:
+            outfile.write(r.content)
 
         # check if image is valid
         try:
