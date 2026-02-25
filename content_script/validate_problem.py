@@ -26,11 +26,16 @@ def validate_image(image, checksum, old_path):
                     continue
         try:
             i = re.sub(r"https://imgur\.com/([\d\w]+)", r"https://i.imgur.com/\g<1>.png", i)
-            r = requests.get(i, headers={"user-agent": "OATutor/1.0"})
+            if i.startswith("/"):
+                name = old_path + "/" + name
+                shutil.copyfile(i, name)
+            else:
+                r = requests.get(i, headers={"user-agent": "OATutor/1.0"})
+                with open(name, 'wb') as outfile:
+                    outfile.write(r.content)
         except:
             raise Exception("Image retrieval error")
-        with open(name, 'wb') as outfile:
-            outfile.write(r.content)
+
         # check if image is valid
         try:
             Image.open(name)

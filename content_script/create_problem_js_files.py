@@ -49,28 +49,32 @@ def save_images(images, checksums, path, num, old_path):
         if found:
             continue
 
-        try:
-            r = requests.get(i, headers=fake_headers)
-            r.raise_for_status()
-        except (requests.exceptions.ConnectionError, ConnectionResetError):
-            parse_result = urlparse(i)
-            if parse_result.query:
-                print(f"Image query params are not supported by the proxy. {i}")
-                sys.exit(1)
-            new_i = "https://cdn.statically.io/img/{}{}".format(parse_result.netloc, parse_result.path)
-            print(f"Trying to proxy image {i} with {new_i}")
+        if(i.startswith("http")):
             try:
-                r = requests.get(new_i, headers=fake_headers, timeout=10)
+                r = requests.get(i, headers=fake_headers)
                 r.raise_for_status()
+            except (requests.exceptions.ConnectionError, ConnectionResetError):
+                parse_result = urlparse(i)
+                if parse_result.query:
+                    print(f"Image query params are not supported by the proxy. {i}")
+                    sys.exit(1)
+                new_i = "https://cdn.statically.io/img/{}{}".format(parse_result.netloc, parse_result.path)
+                print(f"Trying to proxy image {i} with {new_i}")
+                try:
+                    r = requests.get(new_i, headers=fake_headers, timeout=10)
+                    r.raise_for_status()
+                except requests.exceptions.RequestException as e:
+                    print(f"Error saving image with proxy: {new_i}. Exception: {e}")
+                    continue
             except requests.exceptions.RequestException as e:
-                print(f"Error saving image with proxy: {new_i}. Exception: {e}")
+                print(f"Error saving image: {i}. Exception: {e}")
                 continue
-        except requests.exceptions.RequestException as e:
-            print(f"Error saving image: {i}. Exception: {e}")
-            continue
 
-        with open(os.path.join(path, name), 'wb') as outfile:
-            outfile.write(r.content)
+            with open(os.path.join(path, name), 'wb') as outfile:
+                outfile.write(r.content)
+        else:
+            shutil.copyfile(i, os.path.join(path, name))
+
         updated_checksums.append(create_image_md5(os.path.join(path, name)))
 
     return names, num, " ".join(updated_checksums)
