@@ -1,0 +1,660 @@
+#+TITLE: OATutor Content Format Guide
+#+AUTHOR: Derived from process_text.py analysis
+#+DATE: 2026-02-26
+#+OPTIONS: toc:3 num:t
+
+* Overview
+
+Text in body, title, step title, hints, and MC answers is processed
+word-by-word through =preprocess_text_to_latex= in =content_script/process_text.py=.
+The processor converts Python-style math expressions to LaTeX (=$$...$$=)
+using =py2tex= from the =pytexit= library.
+
+The core rule: *text is split by whitespace first, then each word is
+individually checked and converted*. This has many non-obvious
+consequences documented below.
+
+* Math Notation (=$$...$$=)
+
+** Basic usage
+
+Wrap a math expression in =$$...$$= to force LaTeX rendering:
+#+begin_src
+Berechne $$x**2+1$$.
+#+end_src
+
+Single words containing recognised operators (=**=, =/=, =*=, =+=, etc.)
+are also auto-detected and wrapped automatically — see [[*Auto-detection rules]].
+
+** Multi-word expressions need no internal spaces
+
+Because the processor splits on whitespace, a =$$...$$= span that contains
+spaces is processed *word by word*, not as a unit:
+
+#+begin_example
+# BROKEN – each word gets its own $$...$$
+$$f(x) = x**2 - 6x + 5$$
+→ $$f(x)$$ $$=$$ $$x^{2}$$ - $$6x$$ + $$5$$
+  (minus and plus become plain text)
+
+# CORRECT – no internal spaces, one token
+$$f(x)=x**2-6x+5$$
+→ py2tex receives the whole expression → $$f(x)=x^{2}-6x+5$$
+#+end_example
+
+This applies to *step titles* as well as body text.
+
+** Caret vs double-star
+
+Both work inside =$$...$$= because =^= is pre-replaced with =**= before
+any word processing (see [[*Pre-processing replace dict]]):
+
+#+begin_example
+$$x^2$$    →  $$x^{2}$$   ✓
+$$x**2$$   →  $$x^{2}$$   ✓
+#+end_example
+
+** =$$...$$= and the =force_latex= flag
+
+Opening and closing =$$= on the *same word* correctly resets the global
+=force_latex= flag to =0.0= after that word:
+
+#+begin_example
+$$x**2$$     → force_latex = 0.0  (next words are plain text)
+#+end_example
+
+A word that only *starts* with =$$= (no closing =$$= on the same token)
+sets =force_latex = True=, making *all subsequent words* render as LaTeX
+until a closing =$$= is seen:
+
+#+begin_example
+$$f(x)   →  force_latex = True
+x**2     →  LaTeX (italic)
++5$$     →  force_latex = 0.0
+#+end_example
+
+* Verbatim Markers (=##...##=)
+
+Wrapping a word or span in =##= bypasses LaTeX processing entirely and
+outputs the content verbatim.
+
+** Single-word verbatim
+#+begin_example
+##Wie##  →  "Wie"  (plain text, force_latex not affected by content)
+#+end_example
+
+** Resetting =force_latex= with =##...##=
+
+=##word##= sets =force_latex = 0.0=, which is its most important use:
+if a previous word set =force_latex = True= (e.g. attached punctuation),
+use =##FirstWord##= on the first word after the math to restore normal text.
+
+#+begin_example
+# force_latex=True leaks into "Wie verläuft der Graph":
+Vergleiche mit $$f(x)=x**2$$. Wie verläuft...
+
+# Fix – ##Wie## resets force_latex:
+Vergleiche mit $$f(x)=x**2$$. ##Wie## verläuft...
+#+end_example
+
+** Multi-word verbatim span
+
+=##= works across multiple words like =$$= does:
+
+#+begin_example
+##$$\textbf{mit        →  force_latex = False (bool)
+gleichmäßiger         →  skipped (force_latex is bool False)
+Geschwindigkeit}$$##  →  force_latex = 0.0, "##" stripped
+
+Result: $$\textbf{mit gleichmäßiger Geschwindigkeit}$$  (verbatim)
+#+end_example
+
+This is needed for LaTeX commands like =\textbf{...}= that span spaces.
+
+** =##= vs =$$= flag values
+
+| Event | =force_latex= value | Type |
+|---|---|---|
+| Word starts AND ends with =$$= | =0.0= | float |
+| Word starts with =$$= only | =True= | bool |
+| Word ends with =$$= only | =0.0= | float |
+| Word starts AND ends with =##= | =0.0= | float |
+| Word starts with =##= only | =False= | bool |
+| Word ends with =##= only | =0.0= | float |
+
+The type matters: =type(force_latex) != float= is the guard used to check
+whether the bool-flag is active.
+
+* LaTeX Bypass (=\(...\)= / =\[...\]=)
+
+If the *entire text field* contains =\(=, =\)=, =\[=, =\]=, =\begin=, or =\end=,
+the processor returns the text *completely unchanged* (no word-splitting,
+no py2tex):
+
+#+begin_example
+Welche Funktionsart gilt: \(\textbf{mit gleichmäßiger Geschwindigkeit}\)?
+→ returned as-is
+#+end_example
+
+*Caution:* This bypass skips the =force_latex = 0.0= reset at the end of
+the function. If the bypass is triggered, =force_latex= retains whatever
+value it had from the *previous* processed field. This can cause the
+following problem's fields to start in LaTeX mode.
+
+Use the bypass only when needed, and prefer =##...##= for isolated spans.
+
+* Punctuation Rules
+
+This is the most common source of rendering bugs.
+
+** Punctuation OUTSIDE the closing =$$= (attached, no space)
+
+#+begin_example
+$$f(x)=x**2$$.   →  word[-2:] = "$."  (not "$$")
+                 →  force_latex = True  (NOT reset!)
+                 →  all subsequent words rendered as LaTeX (italic)
+#+end_example
+
+=strip_punc= correctly strips the period *inside the processing block*,
+so the expression itself renders fine — but =force_latex= was already set
+to =True= by =use_latex= before stripping.
+
+*** Safe: period outside on the LAST word of the field
+
+If the math expression is the last word, =force_latex=True= has no effect:
+
+#+begin_example
+Vervollständige die Wertetabelle der Funktion $$f(x)=x**2$$.
+                                              ↑ last word → fine
+#+end_example
+
+*** Unsafe: period outside with following text
+
+#+begin_example
+# BROKEN:
+Pia fährt mit $$f(x)=x**2$$. Till hat...
+                            ↑ force_latex=True → "Till hat..." italic
+
+# FIX – use ##...## on first following word:
+Pia fährt mit $$f(x)=x**2$$. ##Till## hat...
+#+end_example
+
+** Punctuation INSIDE the closing =$$= with operators
+
+#+begin_example
+$$f(x)=x**2.$$   →  word[-2:] = "$$"  → force_latex reset ✓
+               BUT: word[2:-2] = "f(x)=x**2."
+                    py2tex receives "x**2."
+                    "2." is a Python float literal (2.0)
+                    → py2tex may produce x^{2.0} or fail
+                    → KaTeX render error: "This component could not be loaded"
+#+end_example
+
+*** Rule: never put punctuation directly adjacent to =$$=
+
+| Format | =force_latex= | py2tex safe? | Verdict |
+|---|---|---|---|
+| =$$expr$$.= (attached outside) | True | ✓ (period stripped) | ✗ leaks italic |
+| =$$expr.$$= (inside, has ops) | 0.0 ✓ | ✗ float literal | ✗ render error |
+| =$$expr$$ .= (space, separate) | 0.0 ✓ | ✓ | ✓ if no hidden space |
+| =$$expr$$.= as last word | True | ✓ | ✓ (no following words) |
+| =$$expr$$. ##Next##= | True→0.0 | ✓ | ✓ |
+
+** Non-breaking spaces (Google Sheets issue)
+
+Python's =str.split()= splits on ASCII whitespace only (space, tab, newline…)
+but *not* on =\xa0= (non-breaking space, U+00A0).
+
+If Google Sheets inserts a non-breaking space between =$$expr$$= and =.=,
+the two tokens are *not separated*:
+
+#+begin_example
+$$f(x)=x**2$$\xa0.  →  one word  →  word[-2:] = "\xa0."  → force_latex=True
+#+end_example
+
+*Symptoms:* =$$expr$$ .= (seemingly correct) still produces italic text.
+
+*Fix:* Delete and retype the space, or use =##...##= on the first
+following word as a guaranteed override.
+
+** Standalone period / comma / other punctuation as separate words
+
+A standalone =.= or =,= word does *not* trigger LaTeX mode and does not
+affect =force_latex= (given it is its own whitespace-separated token).
+
+* Auto-Detection Rules
+
+=use_latex= returns =True= (without explicit =$$=) when any of the following
+match the word:
+
+** Operator characters
+Word contains any of: =**=, =/=, =*=, =+=, =>=, =<=, ==, =_=, =~=
+
+** Word-level operators
+Word contains any of:
+=sqrt=, =abs(=, =inf=, =log{=, =ln{=, =log(=, =sum{=, =\theta=,
+=/mat=, =/tab=, =/lim/int=
+
+** Single-letter variable pattern
+#+begin_example
+[\d\.]*[bdhmnprtxyz][.\?\!,\%\$]{,1}$
+#+end_example
+Matches words like =6x=, =2y=, =3t=, =n=, =x=, =b.= etc.
+Letters in the set: =b d h m n p r t x y z= (lowercase only).
+
+** Parentheses with minus
+#+begin_example
+"(" in word  AND  ")" in word  AND  "-" in word
+#+end_example
+Catches expressions like =S(-3;1)=, =(x-1)=.
+Note: =S(3;1)= has no =-= → *not detected* → plain text (see [[*MC answer formatting]]).
+
+** Digit-hyphen-digit
+#+begin_example
+re.search("\d-\d", word)   e.g. "3-2"
+#+end_example
+
+** Decimal number
+#+begin_example
+re.search("\.\d", word)    e.g. "0.5", "3.14"
+#+end_example
+
+** Coordinate with comma
+#+begin_example
+re.search("\([\d\.]+,[\d\.]+\)", word)   e.g. "(3,5)"
+#+end_example
+
+** Standalone number
+#+begin_example
+re.match("-*\d+[.\,]*$", word)   e.g. "5", "-3", "2,"
+#+end_example
+
+** stepMC mode (MC answer processing only)
+When answers are processed with =stepMC=True=, any word containing =-= is
+recognised:
+#+begin_example
+answer_only_operators = ["-"]
+if stepMC and any([op in word for op in answer_only_operators]): return True
+#+end_example
+
+* MC Answer Formatting
+
+MC answers are split on =|= and each option is processed individually with
+=stepMC=True=.
+
+** The =S(3;1)= problem
+
+Options containing =-= are auto-detected. Options *without* =-= and without
+other recognised operators are *not detected* → rendered as plain text.
+
+#+begin_example
+# Input:
+S(3;1)|S(-3;1)|S(3;-1)|S(-3;-1)
+
+# Result:
+S(3;1)    → plain text  ✗   (no minus)
+S(-3;1)   → LaTeX       ✓   (has minus)
+S(3;-1)   → LaTeX       ✓   (has minus)
+S(-3;-1)  → LaTeX       ✓   (has minus)
+
+# Fix – wrap the problematic option explicitly:
+$$S(3;1)$$|S(-3;1)|S(3;-1)|S(-3;-1)
+#+end_example
+
+** Literal pipe =|= in answer text
+
+Use =\\pipe= to represent a literal =|= character inside an answer:
+#+begin_example
+P(2\pipe8)   →   P(2|8)
+#+end_example
+
+* Step Titles
+
+Step titles go through the same =preprocess_text_to_latex= pipeline as body
+text. For math expressions used as step titles, remove all internal spaces
+so the entire expression is a single token:
+
+#+begin_example
+# BROKEN – mixed math/plain rendering:
+f(x) = x**2 - 6x + 5
+
+# CORRECT – single token, py2tex handles full expression:
+$$f(x)=x**2-6x+5$$
+$$g(x)=2x**2+4x-1$$
+#+end_example
+
+=py2tex= handles implicit multiplication: =6x= → =6*x= via
+=re.sub(r"([0-9]+)([a-zA-Z])", "\g<1>*\g<2>", word)= before calling
+=py2tex=.
+
+* Special Syntax
+
+** Newlines in cell text
+#+begin_example
+\n in cell  →  " |newline| "  →  \\n in JSON
+#+end_example
+
+** Matrices
+#+begin_example
+/mat{(1,2),(3,4)}  →  \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}
+#+end_example
+
+** Tables
+#+begin_example
+/tab{(h1,h2),(r1,r2)}  →  LaTeX tabular environment
+#+end_example
+
+** Limits
+#+begin_example
+/lim{x,0,f(x)}  →  \lim_{x\to 0} f(x)
+#+end_example
+
+** Integrals
+#+begin_example
+/int{f(x),a,b,x}  →  \int_{a}^{b} f(x)\,dx   (definite)
+/int{f(x),x}      →  \int f(x)\,dx            (indefinite)
+#+end_example
+
+** Variabilization
+#+begin_example
+@{varName}  →  replaced at render time with variable value
+#+end_example
+
+** Quoted LaTeX (verbatim in math mode)
+#+begin_example
+\"expr\"  →  renders expr as a quoted string inside math
+#+end_example
+
+** Escaped slash
+#+begin_example
+\/  →  /   (literal forward slash, avoids division detection)
+#+end_example
+
+* Pre-Processing Replace Dict
+
+Applied to the *entire text* before word-splitting (only when =render_latex=True=):
+
+| Input character | Replaced with |
+|---|---|
+| =⋅= (U+22C5 dot operator) | =*= |
+| =−= (U+2212 minus sign) | =-= |
+| =^= (caret) | =**= |
+| =𝑥= (italic x) | =x= |
+| =𝑎= (italic a) | =a= |
+| =𝑏= (italic b) | =b= |
+| =𝑦= (italic y) | =y= |
+| =–= (en dash) | =-= |
+| =≥= | =>== |
+| =≤= | =<== |
+| =∪= | =U= |
+| =\cap= | =∩= |
+| =π= | =pi= |
+| =µ= | =\mu= |
+| =α= | =\alpha= |
+| =≠= | =!== |
+
+Conditionally (only when no coordinate patterns present):
+
+| Input | Replaced with |
+|---|---|
+| =[= | =(= |
+| =]= | =)= |
+
+* Common Problems and Fixes
+
+** Italic text bleeds into plain text after a math block
+
+*Symptom:* Words after a math expression appear italic/in-math-mode.
+
+*Cause:* =force_latex= was set to =True= by a word whose closing =$$= was
+not cleanly detected (usually punctuation attached without space, or
+non-breaking space from Google Sheets).
+
+*Fix:* Use =##FirstWord##= on the first plain-text word after the math:
+#+begin_example
+...$$expr$$. ##Next## word word...
+#+end_example
+
+** "This component could not be loaded" after a math block
+
+*Cause:* py2tex received an expression ending in a float literal (trailing
+period: =x**2.= → =x^{2.0}=) or the frontend received an empty =$$$$=
+segment (text ending with =$$...$$= splitting to an empty trailing part).
+
+*Fix:* Keep period outside =$$=, ideally as the last word of the field or
+use the =##...##= reset pattern:
+#+begin_example
+$$f(x)=x**2$$.        ← last word → ✓
+$$f(x)=x**2$$. ##Wie## verläuft...  ← mid-sentence → ✓
+#+end_example
+
+** =\textbf{...}= or other multi-word LaTeX commands
+
+*Symptom:* Bold/styled text inside =$$= breaks across words.
+
+*Fix:* Use =##...##= to pass the entire expression verbatim:
+#+begin_example
+##$$\textbf{mit gleichmäßiger Geschwindigkeit}$$##
+#+end_example
+
+The =##= wrapper prevents word-splitting inside the span and passes the
+content straight to the frontend's KaTeX renderer.
+
+** MC option not formatted (missing minus sign)
+
+*Symptom:* One MC choice renders in plain text while others render in math.
+
+*Cause:* The option has no =-= and no other recognised operator, so
+=use_latex= returns False.
+
+*Fix:* Wrap the offending option in =$$...$$=:
+#+begin_example
+$$S(3;1)$$|S(-3;1)|S(3;-1)|S(-3;-1)
+#+end_example
+
+** Step title shows mixed math/plain text with =^2= literal
+
+*Cause:* The title has spaces, so words are processed individually;
+=f(x)=, =-=, =+=  may not be recognised as LaTeX.
+
+*Fix:* Collapse the entire expression into a single no-space token:
+#+begin_example
+$$f(x)=x**2-6x+5$$
+#+end_example
+
+** Non-breaking space prevents =$$expr$$ .= from splitting
+
+*Symptom:* You see a space before the period visually, but italic text
+still bleeds through.
+
+*Cause:* Google Sheets inserted =\xa0= (non-breaking space) which
+=str.split()= does not split on.
+
+*Fix:* Delete and retype the space character, or use =##FirstWord##=.
+
+* Tricks & Workarounds
+
+** Trailing period at end of field — the =## ##= trick
+
+You cannot write =$$expr$$.= at the end of a field when more text follows
+(=force_latex= leaks), and you cannot write =$$expr.$$= with operators
+(py2tex float literal bug). The cleanest universal solution:
+
+#+begin_example
+$$expr$$. ## ##
+#+end_example
+
+How it works:
+- =$$expr$$.= — period attached, =force_latex=True=, but expression renders fine
+- =##= — a standalone =##= token becomes an *empty string* in the output
+  and sets =force_latex=0.0=
+- =##= — second empty token for symmetry (one is enough)
+- Result: the rendered text ends with the period, no trailing content
+
+The space between the two =##= is just a word separator; the output is
+two empty strings joined with spaces → invisible.
+
+Equivalent shorter form (one =##= is sufficient):
+#+begin_example
+$$expr$$. ##
+#+end_example
+
+Or using =##word##= when there is a following word anyway:
+#+begin_example
+$$expr$$. ##Und## weiter im Text...
+#+end_example
+
+** Forcing LaTeX on a word that has no recognised operator
+
+Some words pass through as plain text because they lack operators or
+the variable-letter pattern. Two options:
+
+#+begin_example
+# Option A – explicit $$...$$:
+$$S(3;1)$$
+
+# Option B – trigger via a dummy operator that py2tex ignores:
+# (not recommended – use Option A)
+#+end_example
+
+** Resetting =force_latex= silently at the end of a field
+
+If the last expression in a field sets =force_latex=True= but you don't
+want any visible text after it, append one or two =##= tokens:
+
+#+begin_example
+...letzter Ausdruck $$expr$$. ##
+#+end_example
+
+The =##= token outputs an empty string — no period, no word, nothing
+visible — and guarantees =force_latex=0.0= for the next processed field.
+
+** Wrapping an entire formula as a single math block (no-space trick)
+
+When a formula contains spaces (=f(x) = x**2 - 6x=), the word-by-word
+splitting breaks it. Collapse it into one token:
+
+#+begin_example
+# Broken (spaces → separate tokens):
+f(x) = x**2 - 6x + 5
+
+# Working (single token → py2tex gets the whole thing):
+$$f(x)=x**2-6x+5$$
+#+end_example
+
+This is the standard way to write step titles and inline function
+definitions.
+
+** Using =^= instead of =**= inside =$$=
+
+The pre-processing replace dict converts =^= → =**= before any word
+splitting, so =^= is safe and often more readable:
+
+#+begin_example
+$$f(x)=x^2-6x+5$$   ≡   $$f(x)=x**2-6x+5$$
+#+end_example
+
+** Making a negative-free coordinate render as math
+
+=S(3;1)= has no =-= and no recognised operator → plain text by default.
+Wrap it:
+
+#+begin_example
+$$S(3;1)$$
+#+end_example
+
+The coordinate detection uses comma, not semicolon, so =S(3;1)= passes
+through =handle_word= unchanged and KaTeX renders it correctly in italic.
+
+** Passing raw LaTeX with spaces (=##= span trick)
+
+For multi-word LaTeX commands like =\textbf{...}= that span spaces,
+the =##= span prevents per-word processing:
+
+#+begin_example
+##$$\textbf{mit gleichmäßiger Geschwindigkeit}$$##
+#+end_example
+
+Breaking it down:
+- =##$$\textbf{mit= — first token: starts with =##=, sets =force_latex=False=,
+  stripped to =$$\textbf{mit=
+- =gleichmäßiger= — =force_latex=False= (bool) → skipped, kept as-is
+- =Geschwindigkeit}$$##= — last token: ends with =##=, reset to =force_latex=0.0=,
+  stripped to =Geschwindigkeit}$$=
+- Joined result: =$$\textbf{mit gleichmäßiger Geschwindigkeit}$$= ✓
+
+** Blanks / fill-in-the-blank placeholders
+
+The pipeline has no built-in blank placeholder for fill-in-the-blank tasks.
+The solution: place the blank marker *outside* the =$$= delimiters, as a
+plain-text word between two math segments.
+
+#+begin_example
+# Target display:  (x – 5)² = x² + ___ x + ___
+Ergänze: $$(x-5)**2=x**2$$ +__ $$x$$ +__
+#+end_example
+
+How it works:
+- Each =$$...$$= token is a *complete, valid Python expression* that py2tex can handle
+- =__= (or =___=) sits between them as plain text → rendered as underscores by the browser
+- No underscores inside =$$= → no collision with line-67 (=_{2,}= → =___=) or
+  the equation-split marker (line 111: =_{3}=)
+
+Concrete example for the binomial expansion blank:
+
+#+begin_example
+Ergänze: $$(x-5)**2=x**2$$ __ $$x+$$ __
+#+end_example
+
+*Rule:* Split the equation at blank positions so that each =$$...$$= segment is
+self-contained (no dangling =+=, =-=, etc. at the end). Move any connecting
+operator into the visible plain text outside the delimiters if needed.
+
+** Diagnosing =force_latex= bleed
+
+If text is unexpectedly italic, work backwards from the last non-italic
+word to find the token that set =force_latex=True=. Common culprits:
+
+1. Punctuation attached to =$$=: =$$expr$$,= / =$$expr$$.= / =$$expr$$;=
+2. Non-breaking space from Google Sheets (=\xa0=) joining =$$= and punctuation
+3. A previous field's =\(= bypass leaving =force_latex= dirty
+
+Quick test: wrap the first italic word in =##...##= — if it goes back to
+normal, =force_latex= is the cause.
+
+* Quick Reference Card
+
+#+begin_example
+FORCE LATEX:
+  $$expr$$          single-word math (preferred for short expressions)
+  $$noSpaceExpr$$   multi-operator expression without spaces
+
+VERBATIM / BYPASS:
+  ##word##          verbatim single word (also resets force_latex)
+  ##start ... end## verbatim multi-word span
+  \(LaTeX\)         full-field bypass (writes raw LaTeX, use sparingly)
+
+PUNCTUATION AFTER MATH (safest forms):
+  $$expr$$. ##Next## word...   mid-sentence, period after math
+  $$expr$$.                    last word in field only
+
+MC ANSWERS:
+  $$opt$$|opt2|opt3            force-wrap any option lacking "-"
+
+STEP TITLES (math expressions):
+  $$f(x)=x**2-6x+5$$          no internal spaces → py2tex handles all
+
+BLANKS / FILL-IN-THE-BLANK:
+  $$expr1$$ __ $$expr2$$      underscores outside $$, between complete math segments
+  $$x**2$$ __ $$x+$$ __       blank at end: trailing __ after last segment
+
+SPECIAL OPERATORS:
+  x**2  or  x^2   →  x²        (^ replaced to ** before processing)
+  sqrt(x)          →  √x
+  /mat{...}        →  matrix
+  /tab{...}        →  table
+  /lim{...}        →  limit
+  /int{...}        →  integral
+  \\pipe           →  | (literal pipe in MC answers)
+  \/               →  / (literal slash)
+#+end_example
