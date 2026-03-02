@@ -1,0 +1,17 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen21a",
+    "stepAnswer": [
+        "Der Graph ist eine Parabel, die nach unten ge\u00f6ffnet ist."
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "choices": [
+        "Der Graph ist eine $$S-Kurve$$ (kubischer Graph).",
+        "Der Graph ist eine Parabel, die nach oben ge\u00f6ffnet ist.",
+        "Der Graph ist eine Gerade mit negativer Steigung.",
+        "Der Graph ist eine Parabel, die nach unten ge\u00f6ffnet ist."
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen17a",
+    "stepAnswer": [
+        "$$y=ax$$"
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "answerLatex": "$$y=ax$$",
+    "choices": [
+        "$$y=ax$$",
+        "$$y=ax$$",
+        "$$y=ax**2$$",
+        "$$y=ax**3$$"
+    ]
+}

@@ -1,0 +1,16 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen23a",
+    "stepAnswer": [
+        "Er wird viermal so gro\u00df."
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "choices": [
+        "Er wird doppelt so gro\u00df.",
+        "Er wird viermal so gro\u00df.",
+        "Er bleibt gleich."
+    ]
+}

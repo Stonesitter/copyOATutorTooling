@@ -1,0 +1,18 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen11a",
+    "stepAnswer": [
+        "$$y=x**2$$"
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "choices": [
+        "$$y=-x+1$$",
+        "$$y=1$$",
+        "$$y=2x-4$$",
+        "$$y=x**2$$",
+        "$$y=x**2$$"
+    ]
+}

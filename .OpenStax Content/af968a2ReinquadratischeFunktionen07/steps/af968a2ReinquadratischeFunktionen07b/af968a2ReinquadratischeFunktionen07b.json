@@ -1,0 +1,18 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen07b",
+    "stepAnswer": [
+        "$$(2t)**2=4t**2$$"
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "W\u00e4hle die passende Begr\u00fcndung daf\u00fcr, wie sie $$s(2t)$$ im Vergleich zu $$s(t)$$ ver\u00e4ndert.",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "choices": [
+        "$$(2t)**2=4t**2$$",
+        "$$(2t)**2=4t**2$$",
+        "$$t**2$$ wird nur verdoppelt, weil $$t$$ verdoppelt wird",
+        "Nur der Faktor $$4$$ wird verdoppelt",
+        "Quadratische Funktionen werden beim Verdoppeln immer achtmal so gro\u00df"
+    ]
+}

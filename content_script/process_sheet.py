@@ -325,7 +325,7 @@ def process_sheet(spreadsheet_key, sheet_name, default_path, is_local, latex, ve
                 excel_df = pd.concat([df.drop(columns=df.columns[val_col:]), empty_col, error_df, df[add]], axis=1)
                 excel_df.to_excel(writer, sheet_name, index=False, na_rep='')
                 
-                with pd.ExcelWriter(spreadsheet_key, engine='openpyxl', mode='w') as writer:
+                with pd.ExcelWriter(spreadsheet_key, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
                     excel_df.to_excel(writer, sheet_name=sheet_name, index=False, na_rep='')
 
             except Exception as e:
@@ -576,7 +576,7 @@ def process_sheet(spreadsheet_key, sheet_name, default_path, is_local, latex, ve
         df.replace('nan', '', inplace=True)
         excel_df = pd.concat([df.drop(columns=drop), empty_col, error_debug_df, df[add]], axis=1)
 
-        with pd.ExcelWriter(spreadsheet_key, engine='openpyxl', mode='w') as writer:
+        with pd.ExcelWriter(spreadsheet_key, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
             excel_df.to_excel(writer, sheet_name=sheet_name, index=False, na_rep='')
 
     for e in error_data:

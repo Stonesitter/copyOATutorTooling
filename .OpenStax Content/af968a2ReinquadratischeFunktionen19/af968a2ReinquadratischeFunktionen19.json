@@ -1,0 +1,10 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen19",
+    "title": "Aufgabe $$18$$",
+    "body": "Eine Bewegung wird ohne Sp\u00e4tstart durch $$g(x)=x$$ beschrieben (Zeit $$x$$ in $$s$$ , Weg in $$m$$ ). Pia startet $$\\textbf{2 Sekunden sp\u00e4ter}$$ . Gib einen passenden Term f\u00fcr $$k(x)$$ an f\u00fcr $$x \\geq 2$$ , wobei f\u00fcr $$x<2$$ $$k(x)=0$$ gilt.",
+    "variabilization": {},
+    "oer": "OAGer",
+    "license": "https://creativecommons.org/licenses/by/4.0/ <CC BY 4.0>",
+    "lesson": "Reinquadratisch",
+    "courseName": "Ger_Task"
+}

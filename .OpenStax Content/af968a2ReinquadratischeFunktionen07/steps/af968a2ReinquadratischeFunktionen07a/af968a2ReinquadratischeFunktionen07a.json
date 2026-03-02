@@ -1,0 +1,11 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen07a",
+    "stepAnswer": [
+        "20*t**2"
+    ],
+    "problemType": "TextBox",
+    "stepTitle": "Berechen $$s(2t)$$.",
+    "stepBody": "$$s(2t)=$$",
+    "answerType": "arithmetic",
+    "variabilization": {}
+}

@@ -1,0 +1,16 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen12a",
+    "stepAnswer": [
+        "quadratische Funktion"
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "choices": [
+        "lineare Funktion",
+        "quadratische Funktion",
+        "konstante Funktion"
+    ]
+}

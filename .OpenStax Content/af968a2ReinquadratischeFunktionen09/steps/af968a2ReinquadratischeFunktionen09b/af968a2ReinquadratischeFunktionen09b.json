@@ -1,0 +1,18 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen09b",
+    "stepAnswer": [
+        "Alle Funktionswerte werden verdoppelt; die Parabel wird $$\\frac{schmaler}{steiler}$$"
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "Was passiert, wenn $$a$$ verdoppelt wird?",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "answerLatex": "Alle Funktionswerte werden verdoppelt; die Parabel wird $$\\frac{schmaler}{steiler}$$",
+    "choices": [
+        "Alle Funktionswerte werden verdoppelt; die Parabel wird $$\\frac{schmaler}{steiler}$$",
+        "Alle Funktionswerte werden vervierfacht; die Parabel wird $$\\frac{schmaler}{steiler}$$",
+        "Die Parabel wird an der $$x-Achse$$ gespiegelt; die \u00d6ffnung wechselt.",
+        "Der Scheitelpunkt verschiebt sich nach oben; die Form bleibt gleich"
+    ]
+}

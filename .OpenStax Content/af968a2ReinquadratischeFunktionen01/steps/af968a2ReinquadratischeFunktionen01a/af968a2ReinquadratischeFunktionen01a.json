@@ -1,0 +1,17 @@
+{
+    "id": "af968a2ReinquadratischeFunktionen01a",
+    "stepAnswer": [
+        "$$f(x)=2x**2$$"
+    ],
+    "problemType": "MultipleChoice",
+    "stepTitle": "",
+    "stepBody": "",
+    "answerType": "string",
+    "variabilization": {},
+    "choices": [
+        "$$f(x)=2x**2$$",
+        "$$f(x)=2x**2$$",
+        "$$f(x)=x**2+3x+2$$",
+        "$$f(x)=x**2-4x$$"
+    ]
+}
